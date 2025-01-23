@@ -15,7 +15,7 @@
 ## Installation
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/your-username/your-repo.git
+   git clone https://github.com/ai-ml-biits/radio_data_analytics_biits.git
    cd your-repo
 
 2. **Create your virtual enviroment**
@@ -32,7 +32,7 @@
    '''bash 
       > On macOS: brew install ffmpeg
       > On Linux: sudo apt install ffmpeg
-      > On Windows: Download from FFmpeg's website and add it to your PATH. (https://www.gyan.dev/ffmpeg/builds/) ffmpeg-git-full.7z => Download this file
+      > On Windows: Download from FFmpeg's website and add it to your PATH. (https://www.gyan.dev/ffmpeg/builds/) [ffmpeg-git-full.7z] Download this file from the website
       
       
 5. ***After this all you can run python script**
