@@ -38,7 +38,7 @@
       python WhisperAgent.py
 
 
-**NOTE**: **Its better to install the python 3.11.0 and then do the entire setup**
+**NOTE**: **Recomended python version - 3.11.0**
 
 
 
