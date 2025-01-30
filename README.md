@@ -38,7 +38,7 @@
       python WhisperAgent.py
 
 
-6. ***For Running The GetAudioFile***
+6. ***For Running The GetAudioPath***
    ```bash
       python GetAudioPaths.py C:\AnyPath\audio.csv C:\Folders
 
