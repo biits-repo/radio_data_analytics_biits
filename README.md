@@ -38,6 +38,10 @@
       python WhisperAgent.py
 
 
+6. ***For Running The GetAudioFile***
+   ```bash
+      python GetAudioPaths.py C:\AnyPath\audio.csv C:\Folders
+
 **NOTE**: **Recomended python version - 3.11.0**
 
 
