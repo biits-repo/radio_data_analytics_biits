@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 from typing import Dict, List
 import pandas as pd
+from Chunking import Chunker
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -63,6 +64,7 @@ class GetCsv:
             # Here saving data to CSV
             if self.save_as_csv(data):
                 logging.info("CSV creation completed successfully.")
+                return True
             else:
                 logging.error("CSV creation failed.")
 
@@ -103,7 +105,10 @@ def main():
     try:
         # Here Creating an instance of GetCsv and processing the audio paths
         obj = GetCsv(csv_path, root_folder)
-        obj.get_audio_path()
+        is_completed = obj.get_audio_path()
+        if is_completed:
+            chunk_obj = Chunker(csv_path)
+            chunk_obj.read_csv()
     except Exception as e:
         logging.error(f"Script execution failed: {e}")
         sys.exit(1)
