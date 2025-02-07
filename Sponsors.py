@@ -4,6 +4,9 @@ import numpy as np
 import pandas as pd
 import logging
 import os
+import spacy
+from db import Database
+import json
 
 logging.basicConfig(level = logging.INFO , format = '%(asctime)s - %(levelname)s - %(message)s')
 
@@ -12,6 +15,21 @@ class GetSponsors:
 
     def __init__(self):
         pass
+
+    def create_json_file(self,data,file_name):
+
+        copy_file_name = file_name
+        ext = str(file_name).split('.')[1]
+
+        json_path = Path('JSON')
+        json_path.mkdir(exist_ok=True)
+        json_file = str(copy_file_name).replace(ext,'json')
+
+        json_file_path = json_path / json_file
+
+        with open(json_file_path , 'w') as file:
+            json.dump(data, file, indent = 4)
+        print("Sucessfully created json file")
 
 
 
@@ -47,11 +65,41 @@ class GetSponsors:
 
             i+=1
 
-        data = {
-            "Timestamps" : lists,
-            "Sponsors_Shows" : lists_one
+        sponsor_name = ""
+        nlp = spacy.load('en_core_web_sm')
+
+        for text in lists_one:
+
+            doc = nlp(text)
+
+            for ent in doc.ents:
+
+                if ent.label_ in ["ORG","PERSON"]:
+                    sponsor_name += ent.text + " "
+
+        print(f"THIS IS SPONOSR {sponsor_name}") 
+        
+        
+        db_data = {
+            "time_stamp" : ' '.join(lists),
+            "sponsor" : ' '.join(lists_one),
+            "sponsor_name" : sponsor_name,
+            "json_obj": json.dumps({
+                "time_stamp": ' '.join(lists),
+                "sponsor": ' '.join(lists_one),
+                "sponsor_name": sponsor_name
+            })
         }
 
+        data = {
+            "time_stamp" : lists,
+            "sponsor" : lists_one,
+            "sponsor_name" : sponsor_name
+        }
+
+        self.create_json_file(db_data , file_name)
+
+    
         try:
 
             csv_path = Path("CSV")
@@ -74,9 +122,19 @@ class GetSponsors:
 
             df.to_csv(csv_path / file_name , index=False)
             logging.info("File saved sucessfully")
-        except Exception as error:
-            logging.error(f"LINE 61: ########################### {str(error)}")
 
-        
+        except Exception as error:
+
+            logging.error(f"LINE 61: {str(error)}")
+        finally:
+
+            db_conn = Database()
+            db_conn.store_sponsor_details(db_data)
+
+            print("Data inserted successfully")
+            db_conn.close_db_connection()
+    
+
+
 
         
