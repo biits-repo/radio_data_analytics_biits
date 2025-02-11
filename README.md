@@ -1,4 +1,4 @@
-# Radio_Data_Analytics_BIITS
+# Case Study: Radio Data Analytics
 
 > This projects uses whipser model for the audio transcription where we have to pass the audio file since audio file could be large so we are chunking first and then passing the audio chunks.
 > And from that audio chunks we are getting the output as transcribed txt.
