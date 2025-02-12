@@ -75,17 +75,6 @@ class DatabaseSetup:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """,
-            "transactions": """
-                CREATE TABLE transactions (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    user_id INT NOT NULL,
-                    sponsor_id INT NOT NULL,
-                    amount DECIMAL(10,2) NOT NULL,
-                    transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                    FOREIGN KEY (sponsor_id) REFERENCES sponsor_details(id) ON DELETE CASCADE
-                )
-            """,
             "audio_details": """
                 CREATE TABLE audio_details (
                     audio_id INT AUTO_INCREMENT PRIMARY KEY,
