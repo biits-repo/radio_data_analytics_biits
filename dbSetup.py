@@ -67,12 +67,10 @@ class DatabaseSetup:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """,
-            "sponsor_details": """
-                CREATE TABLE sponsor_details (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    sponsor_name VARCHAR(255) NOT NULL,
-                    description TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            "sponsor": """
+                CREATE TABLE sponsor (
+                    sponsor_id INT AUTO_INCREMENT PRIMARY KEY,
+                    sponsor_name TEXT
                 )
             """,
             "audio_details": """
@@ -85,21 +83,25 @@ class DatabaseSetup:
             "chunk_details": """
                 CREATE TABLE chunk_details (
                     chunk_id INT AUTO_INCREMENT PRIMARY KEY,
-                    chunk_file_name TEXT NOT NULL,
-                    chunk_text TEXT NOT NULL,
-                    timestamps TEXT NOT NULL,
+                    chunk_file_name TEXT,
+                    chunk_text TEXT,
+                    timestamps TEXT,
                     audio_id INT,
+                    chunk_creation_date DATE,
+                    chunk_creation_date_time DATETIME,
                     FOREIGN KEY (audio_id) REFERENCES audio_details(audio_id) ON DELETE CASCADE
                 )
             """,
-            "sponsor_occurence": """
-                CREATE TABLE sponsor_occurence (
+            "sponsor_occurrence": """
+                CREATE TABLE sponsor_occurrence (
                     id INT AUTO_INCREMENT PRIMARY KEY,
+                    audio_id INT,
                     chunk_id INT,
                     sponsor_id INT,
-                    sponsor_occurence TEXT,
+                    sponsor_frequency INT,
+                    FOREIGN KEY (audio_id) REFERENCES audio_details(audio_id) ON DELETE CASCADE,
                     FOREIGN KEY (chunk_id) REFERENCES chunk_details(chunk_id) ON DELETE CASCADE,
-                    FOREIGN KEY (sponsor_id) REFERENCES sponsor_details(id) ON DELETE CASCADE
+                    FOREIGN KEY (sponsor_id) REFERENCES sponsor(sponsor_id) ON DELETE CASCADE
                 )
             """
         }
