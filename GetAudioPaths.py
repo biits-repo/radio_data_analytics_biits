@@ -108,7 +108,10 @@ def main():
         is_completed = obj.get_audio_path()
         if is_completed:
             chunk_obj = Chunker(csv_path)
-            chunk_obj.read_csv()
+            saved = chunk_obj.store_audio_data()
+            if saved:
+                print("Audio Data Inserted Successfully")
+                chunk_obj.read_csv()
     except Exception as e:
         logging.error(f"Script execution failed: {e}")
         sys.exit(1)
