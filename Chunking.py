@@ -1,81 +1,50 @@
 import subprocess
 from pathlib import Path
-import pandas as pd
-from WhisperAgent import WhisperAgent
-from Sponsors import GetSponsors
 import logging
+from pydub.utils import mediainfo
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-logging.basicConfig(level=logging.INFO , format='%(asctime)s - %(levelname)s - %(message)s')
-
-
-
-class Chunker:
-
-
-    def __init__(self , csv_path:str):
-
-        self.model = WhisperAgent()
-
-        self.chunk_dir = Path("Chunks")
-
-        self.chunk_dir.mkdir(exist_ok=True)
-
-        self.csv_path = csv_path
-        
-        self.chunk_path = self.chunk_dir / 'chunk_%d.mp3'
-
-
-    def read_csv(self):
-
-        df = pd.read_csv(self.csv_path)
-
-        path_list = df['full_path'].to_list()
-        
-        for path in path_list:
-
-            file_name = str(path).split("\\")[-1]
-            is_completed = self.chunk_audio(path)
-
-            if is_completed:
-
-                transcription_list = self.model.transcribe(self.chunk_dir)
-
-                print(f"THIS IS TRANSCRIPTION LIST {transcription_list}")
-
-
-                try:
-                    sponsors = GetSponsors()
-
-                    
-                    #logging.info("Getting sponsor names ...")
-
-                    sponsors.get_sponsor(transcription_list , file_name)
-                except Exception as e:
-                    print(f"THIS IS THE ERROR {str(e)}")
-        
-                    
-
-
-
-    def chunk_audio(self , audio_file):
-
-        command = [
-            'ffmpeg',
-            '-i', audio_file,
-            '-f', 'segment',
-            '-segment_time', str(600),
-            '-c:a', 'libmp3lame',
-            '-b:a', '192k',
-            self.chunk_path
-        ]
-
-        try:
-            subprocess.run(command, check=True)
-            print(f"Audio file '{audio_file}' has been chunked successfully.")
-            return True
-        except subprocess.CalledProcessError as e:
-            print(f"An error occurred while chunking the audio file: {e}")
-            return False
-
-
+def chunk_audio_only(audio_file: str, segment_time: int = 200) -> list:
+    """
+    Chunks a single audio file into segments of given segment_time (in seconds).
+    It creates a unique subdirectory for each audio file (based on its stem) under the base "Chunks" folder.
+    
+    Returns a sorted list of chunk file paths.
+    """
+    base_chunk_dir = Path("Chunks")
+    base_chunk_dir.mkdir(exist_ok=True)
+    
+    file_stem = Path(audio_file).stem
+    chunk_dir = base_chunk_dir / f"{file_stem}_chunks"
+    chunk_dir.mkdir(exist_ok=True)
+    
+    chunk_path = chunk_dir / 'chunk_%d.mp3'
+    
+    # (Optional) Check duration using mediainfo
+    try:
+        info = mediainfo(audio_file)
+        duration = float(info["duration"])
+        logging.info(f"File {audio_file} duration: {duration:.2f}s")
+    except Exception as e:
+        logging.warning(f"Could not determine duration for {audio_file}: {e}")
+    
+    command = [
+        'ffmpeg',
+        '-i', audio_file,
+        '-f', 'segment',
+        '-segment_time', str(segment_time),
+        '-c:a', 'libmp3lame',
+        '-b:a', '192k',
+        str(chunk_path)
+    ]
+    
+    try:
+        subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        logging.info(f"Audio file '{audio_file}' chunked successfully in {chunk_dir}.")
+        chunks = sorted([str(p) for p in chunk_dir.iterdir() if p.is_file()])
+        logging.info(f"Chunks for {audio_file}: {chunks}")
+        return chunks
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Error chunking audio file {audio_file}: {e.stderr.decode()}")
+        return []
