@@ -17,7 +17,7 @@ class GetCsv:
 
         Args:
             csv_path (str): Path to save the CSV file.
-            root_folder (str): Root folder containing audio files.
+            root_folder (str): Root folder containing audio files.c
         """
         self.csv_path = Path(csv_path)
         self.root_folder = Path(root_folder)
@@ -90,17 +90,20 @@ class GetCsv:
             return False
 
 
-def main():
+def main(audio_csv_path,folder_path):
     """
     Main function to execute the script.
     """
-    # Checking if the required arguments are provided a=other wise raising error
-    if len(sys.argv) < 3:
-        logging.error("Example: python script.py <csv_path> <root_folder>")
-        sys.exit(1)
+    #Checking if the required arguments are provided a=other wise raising error
+    # if len(sys.argv) < 3:
+    #     logging.error("Example: python script.py <csv_path> <root_folder>")
+    #     sys.exit(1)
 
-    csv_path = sys.argv[1]
-    root_folder = sys.argv[2]
+    # csv_path = sys.argv[1]
+    # root_folder = sys.argv[2]
+
+    csv_path = audio_csv_path
+    root_folder = folder_path
 
     try:
         # Here Creating an instance of GetCsv and processing the audio paths
@@ -117,5 +120,6 @@ def main():
         sys.exit(1)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
+
     main()
