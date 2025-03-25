@@ -1,13 +1,16 @@
 import subprocess
 from pathlib import Path
 import pandas as pd
-from WhisperAgent import WhisperAgent
+# from WhisperAgent import WhisperAgent
+from WhisperAgent import TranscribeAgent
 from Sponsors import GetSponsors
 import logging
 import pandas as pd
 from pydub.utils import mediainfo
 from rdascripts import Database
 logging.basicConfig(level=logging.INFO , format='%(asctime)s - %(levelname)s - %(message)s')
+import requests
+import concurrent.futures
 
 
 
@@ -16,15 +19,22 @@ class Chunker:
 
     def __init__(self , csv_path:str):
 
-        self.model = WhisperAgent()
+        # self.model = WhisperAgent()
 
-        self.chunk_dir = Path("Chunks")
 
-        self.chunk_dir.mkdir(exist_ok=True)
 
-        self.csv_path = csv_path
+        # self.chunk_dir = Path("Chunks")
+
+        # self.chunk_dir.mkdir(exist_ok=True)
+
+        # self.csv_path = csv_path
         
-        self.chunk_path = self.chunk_dir / 'chunk_%d.mp3'
+        # self.chunk_path = str(self.chunk_dir / 'chunk_%d.mp3')
+
+        #self.chunk_dir = Path("Chunks")
+        #self.chunk_dir.mkdir(exist_ok=True)
+        self.csv_path = csv_path
+        #self.chunk_path = self.chunk_dir / 'chunk_%d.mp3'
 
         self.db_obj = Database()
 
@@ -34,17 +44,31 @@ class Chunker:
         df = pd.read_csv(self.csv_path)
 
         path_list = df['full_path'].to_list()
+
+        print(path_list)
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future_to_path = {executor.submit(self.chunk_audio, path): path for path in path_list}
+            for future in concurrent.futures.as_completed(future_to_path):
+                path = future_to_path[future]
+                try:
+                    future.result()
+                except Exception as exc:
+                    logging.error(f"Audio file {path} generated an exception: {exc}")
+
         
         for path in path_list:
 
             self.file_name = str(path).split("\\")[-1]
             is_completed = self.chunk_audio(path)
 
-
+            
             self.audio_id = self.db_obj.get_audio_id(self.file_name)
 
+            exit()
             if is_completed:
-
+                
+                
+                self.model = TranscribeAgent()
                 audio_chunk_list = self.model.transcribe(self.chunk_dir,self.file_name,self.audio_id)
 
                 print(f"THIS IS TRANSCRIPTION LIST {audio_chunk_list}")
@@ -129,6 +153,15 @@ class Chunker:
 
     def chunk_audio(self , audio_file):
 
+        base_chunk_dir = Path("Chunks")
+        base_chunk_dir.mkdir(exist_ok=True)
+        
+        file_stem = Path(audio_file).stem
+        chunk_dir = base_chunk_dir / f"{file_stem}_chunks"
+        chunk_dir.mkdir(exist_ok=True)
+    
+        chunk_path = chunk_dir / 'chunk_%d.mp3'
+
         command = [
             'ffmpeg',
             '-i', audio_file,
@@ -136,7 +169,8 @@ class Chunker:
             '-segment_time', str(200),
             '-c:a', 'libmp3lame',
             '-b:a', '192k',
-            self.chunk_path
+            chunk_path
+            #self.chunk_path
         ]
 
         try:
@@ -147,4 +181,4 @@ class Chunker:
             print(f"An error occurred while chunking the audio file: {e}")
             return False
 
-
+    
