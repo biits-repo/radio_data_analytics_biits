@@ -1,7 +1,6 @@
 import subprocess
 from pathlib import Path
 import pandas as pd
-# from WhisperAgent import WhisperAgent
 from WhisperAgent import TranscribeAgent
 from Sponsors import GetSponsors
 import logging
@@ -11,6 +10,7 @@ from rdascripts import Database
 logging.basicConfig(level=logging.INFO , format='%(asctime)s - %(levelname)s - %(message)s')
 import requests
 import concurrent.futures
+from tests import StartProcessing
 
 
 
@@ -19,20 +19,17 @@ class Chunker:
 
     def __init__(self , csv_path:str):
 
-        # self.model = WhisperAgent()
-
-
 
         # self.chunk_dir = Path("Chunks")
 
         # self.chunk_dir.mkdir(exist_ok=True)
 
-        # self.csv_path = csv_path
+        self.csv_path = csv_path
         
         # self.chunk_path = str(self.chunk_dir / 'chunk_%d.mp3')
 
-        #self.chunk_dir = Path("Chunks")
-        #self.chunk_dir.mkdir(exist_ok=True)
+        # self.chunk_dir = Path("Chunks")
+        # self.chunk_dir.mkdir(exist_ok=True)
         self.csv_path = csv_path
         #self.chunk_path = self.chunk_dir / 'chunk_%d.mp3'
 
@@ -62,12 +59,19 @@ class Chunker:
             is_completed = self.chunk_audio(path)
 
             
-            self.audio_id = self.db_obj.get_audio_id(self.file_name)
+            #self.audio_id = self.db_obj.get_audio_id(self.file_name)
 
-            exit()
+            
             if is_completed:
                 
-                
+                start_processes = StartProcessing()
+                val = start_processes.main()
+                print(val)
+                exit()
+                self.chunk_dir = Path("Chunks")
+
+                self.chunk_dir.mkdir(exist_ok=True)
+
                 self.model = TranscribeAgent()
                 audio_chunk_list = self.model.transcribe(self.chunk_dir,self.file_name,self.audio_id)
 
@@ -141,7 +145,7 @@ class Chunker:
             data_inserted = self.db_obj.store_audio_data(audio_data_list)
 
             if data_inserted:
-                 return True
+                return True
             else:
                 return False
 
@@ -157,10 +161,10 @@ class Chunker:
         base_chunk_dir.mkdir(exist_ok=True)
         
         file_stem = Path(audio_file).stem
-        chunk_dir = base_chunk_dir / f"{file_stem}_chunks"
+        chunk_dir = base_chunk_dir / f"{file_stem}"
         chunk_dir.mkdir(exist_ok=True)
     
-        chunk_path = chunk_dir / 'chunk_%d.mp3'
+        self.chunk_path = chunk_dir / 'chunk_%d.mp3'
 
         command = [
             'ffmpeg',
@@ -169,7 +173,7 @@ class Chunker:
             '-segment_time', str(200),
             '-c:a', 'libmp3lame',
             '-b:a', '192k',
-            chunk_path
+            self.chunk_path
             #self.chunk_path
         ]
 
