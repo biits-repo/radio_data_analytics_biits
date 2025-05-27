@@ -1,16 +1,12 @@
 import mysql.connector
 from mysql.connector import Error
+import pandas as pd
+from pathlib import Path
 
 class DatabaseSetup:
     def __init__(self, user, password, host, database):
         """
         Initializes the database setup with connection details.
-
-        Args:
-            user (str): MySQL username
-            password (str): MySQL password
-            host (str): MySQL server host
-            database (str): Name of the database
         """
         self.config = {
             "user": user,
@@ -23,41 +19,42 @@ class DatabaseSetup:
     def create_database(self):
         """Creates the database if it does not exist."""
         try:
-            connection = mysql.connector.connect(
-                user=self.config["user"], 
-                password=self.config["password"], 
+            conn = mysql.connector.connect(
+                user=self.config["user"],
+                password=self.config["password"],
                 host=self.config["host"]
             )
-            cursor = connection.cursor()
+            cursor = conn.cursor()
             cursor.execute(f"CREATE DATABASE IF NOT EXISTS {self.database}")
             print(f"✅ Database '{self.database}' is ready.")
         except Error as e:
             print(f"❌ Error creating database: {e}")
         finally:
-            if connection.is_connected():
+            if conn.is_connected():
                 cursor.close()
-                connection.close()
+                conn.close()
 
     def connect(self):
         """Establishes a connection to the database."""
         try:
-            connection = mysql.connector.connect(**self.config)
+            conn = mysql.connector.connect(**self.config)
             print("✅ Connected to MySQL database.")
-            return connection
+            return conn
         except Error as e:
             print(f"❌ Connection error: {e}")
             return None
 
     def table_exists(self, cursor, table_name):
         """Checks if a table already exists."""
-        cursor.execute(f"""
-            SELECT COUNT(*) FROM information_schema.tables 
-            WHERE table_schema = %s AND table_name = %s
-        """, (self.database, table_name))
+        cursor.execute(
+            "SELECT COUNT(*) FROM information_schema.tables "
+            "WHERE table_schema = %s AND table_name = %s",
+            (self.database, table_name)
+        )
         return cursor.fetchone()[0] > 0
 
     def create_tables(self):
-        """Creates the required tables in the database."""
+        """Creates all required tables in the database."""
         TABLES = {
             "users": """
                 CREATE TABLE users (
@@ -89,7 +86,9 @@ class DatabaseSetup:
                     audio_id INT,
                     chunk_creation_date DATE,
                     chunk_creation_date_time DATETIME,
-                    FOREIGN KEY (audio_id) REFERENCES audio_details(audio_id) ON DELETE CASCADE
+                    FOREIGN KEY (audio_id)
+                      REFERENCES audio_details(audio_id)
+                      ON DELETE CASCADE
                 )
             """,
             "sponsor_occurrence": """
@@ -99,36 +98,76 @@ class DatabaseSetup:
                     chunk_id INT,
                     sponsor_id INT,
                     sponsor_frequency INT,
-                    FOREIGN KEY (audio_id) REFERENCES audio_details(audio_id) ON DELETE CASCADE,
-                    FOREIGN KEY (chunk_id) REFERENCES chunk_details(chunk_id) ON DELETE CASCADE,
-                    FOREIGN KEY (sponsor_id) REFERENCES sponsor(sponsor_id) ON DELETE CASCADE
+                    FOREIGN KEY (audio_id)
+                      REFERENCES audio_details(audio_id)
+                      ON DELETE CASCADE,
+                    FOREIGN KEY (chunk_id)
+                      REFERENCES chunk_details(chunk_id)
+                      ON DELETE CASCADE,
+                    FOREIGN KEY (sponsor_id)
+                      REFERENCES sponsor(sponsor_id)
+                      ON DELETE CASCADE
                 )
             """
         }
 
-        connection = self.connect()
-        if connection:
-            try:
-                cursor = connection.cursor()
-                for table_name, table_query in TABLES.items():
-                    if self.table_exists(cursor, table_name):
-                        print(f"⚠️ Table '{table_name}' already exists.")
-                    else:
-                        cursor.execute(table_query)
-                        print(f"✅ Table '{table_name}' has been created.")
-                connection.commit()
-            except Error as e:
-                print(f"❌ Error creating tables: {e}")
-            finally:
-                cursor.close()
-                connection.close()
+        conn = self.connect()
+        if not conn:
+            return
+        cursor = conn.cursor()
+        for name, ddl in TABLES.items():
+            if self.table_exists(cursor, name):
+                print(f"⚠️ Table '{name}' already exists.")
+            else:
+                cursor.execute(ddl)
+                print(f"✅ Table '{name}' created.")
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+    def populate_from_csv(self, csv_path: str) -> None:
+        """
+        1) Ensures DB & tables exist,
+        2) Reads CSV at csv_path,
+        3) Inserts into audio_details & chunk_details.
+        """
+        # 1️⃣ Schema
+        self.create_database()
+        self.create_tables()
+
+        # 2️⃣ Connect
+        conn = self.connect()
+        if not conn:
+            return
+        cursor = conn.cursor()
+
+        # 3️⃣ Load CSV and insert
+        df = pd.read_csv(csv_path)
+        for _, row in df.iterrows():
+            # insert into audio_details
+            cursor.execute(
+                "INSERT INTO audio_details (audio_name, audi_length) VALUES (%s, %s)",
+                (row["audio_name"], row["audio_length"])
+            )
+            audio_id = cursor.lastrowid
+
+            # insert corresponding chunks
+            stem = Path(row["full_path"]).stem
+            for chunk_file in sorted(Path("Chunks", stem).glob("chunk_*.mp3")):
+                cursor.execute(
+                    "INSERT INTO chunk_details (chunk_file_name, audio_id) "
+                    "VALUES (%s, %s)",
+                    (str(chunk_file), audio_id)
+                )
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print("✅ Database populated from CSV")
 
 if __name__ == "__main__":
-    
-    db_setup = DatabaseSetup(user="root", password="12345", host="localhost", database="sponsor_info")
-    
-    
-    db_setup.create_database()
-    
-    
-    db_setup.create_tables()
+    # Quick local test
+    db = DatabaseSetup(user="root", password="12345",
+                       host="localhost", database="sponsor_info")
+    db.create_database()
+    db.create_tables()
